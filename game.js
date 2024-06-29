@@ -12,7 +12,32 @@ window.addEventListener('DOMContentLoaded', (event) => {
     const sessionId = pathArray[2];
     let state = pathArray[3];
 
-    // Define abilities in the same order they were shuffled in the backend
+    // Simple seed-based random number generator
+    function mulberry32(a) {
+        return function() {
+            var t = a += 0x6D2B79F5;
+            t = Math.imul(t ^ t >>> 15, t | 1);
+            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+
+    // Seeded shuffle function
+    function seededShuffle(array, seed) {
+        const rng = mulberry32(seed);
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(rng() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    // Convert session UUID to a seed
+    function uuidToSeed(uuid) {
+        return uuid.split('-').reduce((acc, part) => acc + parseInt(part, 16), 0);
+    }
+
+    // Define abilities
     const abilities = [
         "Use Purple Holds",
         "Use Hooks",
@@ -20,14 +45,18 @@ window.addEventListener('DOMContentLoaded', (event) => {
         "Use Green Holds"  // Add more abilities as needed
     ];
 
+    // Shuffle abilities based on session UUID
+    const seed = uuidToSeed(sessionId);
+    const shuffledAbilities = seededShuffle(abilities.slice(), seed);
+
     // Display current restrictions based on the state
     const restrictions = [];
     const unlockedAbilities = [];
     for (let i = 0; i < state.length; i++) {
         if (state[i] === '0') {
-            restrictions.push(abilities[i]);
+            restrictions.push(shuffledAbilities[i]);
         } else {
-            unlockedAbilities.push(abilities[i]);
+            unlockedAbilities.push(shuffledAbilities[i]);
         }
     }
 
